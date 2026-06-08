@@ -128,7 +128,7 @@ function SalesInvoice() {
           </thead>
 
           <tbody>
-            {invoiceItems.map((item, index) => (
+            {invoiceItems.map((item) => (
               <tr key={item.id} className="border-t">
                 <td className="p-3">
                   <input

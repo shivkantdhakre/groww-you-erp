@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 function JournalVoucher() {
-  const [voucherNo, setVoucherNo] = useState("JV-001");
+  const [voucherNo] = useState("JV-001");
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
