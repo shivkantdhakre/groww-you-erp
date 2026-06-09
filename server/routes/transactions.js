@@ -1,71 +1,40 @@
 import express from "express";
+import {
+  getSalesInvoices,
+  createSalesInvoice,
+  getPurchaseInvoices,
+  createPurchaseInvoice
+} from "../controllers/transactionsController.js";
+import { verifyTokenAndTenant } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Mock data structures
-let salesInvoices = [];
-let purchaseInvoices = [];
+// Apply the security middleware to ALL routes in this file
+router.use(verifyTokenAndTenant);
+
+// --- SALES INVOICES ---
+router.get("/sales-invoices", getSalesInvoices);
+router.post("/sales-invoices", createSalesInvoice);
+
+// --- PURCHASE INVOICES ---
+router.get("/purchase-invoices", getPurchaseInvoices);
+router.post("/purchase-invoices", createPurchaseInvoice);
+
+// Mock data structures for other endpoints
 let salesReturns = [];
 let purchaseReturns = [];
 let vouchers = []; // Contra, Journal, Payment, Receipt
 
-// --- SALES INVOICES ---
-router.get("/sales-invoices", (req, res) => {
-  res.status(200).json(salesInvoices);
-});
-
-router.post("/sales-invoices", (req, res) => {
-  const { invoiceNo, invoiceDate, customerName, items, totalItems, totalQty, grandTotal } = req.body;
-  if (!invoiceDate || !customerName || !items || items.length === 0) {
-    return res.status(400).json({ message: "Invoice Date, Customer Name and at least one item are required" });
-  }
-  const newInvoice = {
-    id: salesInvoices.length + 1,
-    invoiceNo: invoiceNo || `INV-${String(salesInvoices.length + 1).padStart(3, "0")}`,
-    invoiceDate,
-    customerName,
-    items,
-    totalItems,
-    totalQty,
-    grandTotal
-  };
-  salesInvoices.push(newInvoice);
-  res.status(201).json(newInvoice);
-});
-
-// --- PURCHASE INVOICES ---
-router.get("/purchase-invoices", (req, res) => {
-  res.status(200).json(purchaseInvoices);
-});
-
-router.post("/purchase-invoices", (req, res) => {
-  const { invoiceNo, invoiceDate, vendorName, items, totalItems, totalQty, grandTotal } = req.body;
-  if (!invoiceDate || !vendorName || !items || items.length === 0) {
-    return res.status(400).json({ message: "Invoice Date, Vendor Name and at least one item are required" });
-  }
-  const newInvoice = {
-    id: purchaseInvoices.length + 1,
-    invoiceNo: invoiceNo || `PUR-${String(purchaseInvoices.length + 1).padStart(3, "0")}`,
-    invoiceDate,
-    vendorName,
-    items,
-    totalItems,
-    totalQty,
-    grandTotal
-  };
-  purchaseInvoices.push(newInvoice);
-  res.status(201).json(newInvoice);
-});
-
 // --- RETURNS ---
 router.get("/sales-returns", (req, res) => {
-  res.status(200).json(salesReturns);
+  res.status(200).json(salesReturns.filter(r => r.companyId === req.user.companyId));
 });
 
 router.post("/sales-returns", (req, res) => {
   const { returnNo, date, customerName, items, grandTotal } = req.body;
   const newReturn = {
     id: salesReturns.length + 1,
+    companyId: req.user.companyId,
     returnNo: returnNo || `SRT-${String(salesReturns.length + 1).padStart(3, "0")}`,
     date,
     customerName,
@@ -77,13 +46,14 @@ router.post("/sales-returns", (req, res) => {
 });
 
 router.get("/purchase-returns", (req, res) => {
-  res.status(200).json(purchaseReturns);
+  res.status(200).json(purchaseReturns.filter(r => r.companyId === req.user.companyId));
 });
 
 router.post("/purchase-returns", (req, res) => {
   const { returnNo, date, vendorName, items, grandTotal } = req.body;
   const newReturn = {
     id: purchaseReturns.length + 1,
+    companyId: req.user.companyId,
     returnNo: returnNo || `PRT-${String(purchaseReturns.length + 1).padStart(3, "0")}`,
     date,
     vendorName,
@@ -97,11 +67,12 @@ router.post("/purchase-returns", (req, res) => {
 // --- VOUCHERS (Contra, Journal, Payment, Receipt) ---
 router.get("/vouchers", (req, res) => {
   const { type } = req.query; // Filter by type if provided
+  const companyVouchers = vouchers.filter(v => v.companyId === req.user.companyId);
   if (type) {
-    const filtered = vouchers.filter(v => v.type.toLowerCase() === type.toLowerCase());
+    const filtered = companyVouchers.filter(v => v.type.toLowerCase() === type.toLowerCase());
     return res.status(200).json(filtered);
   }
-  res.status(200).json(vouchers);
+  res.status(200).json(companyVouchers);
 });
 
 router.post("/vouchers", (req, res) => {
@@ -111,6 +82,7 @@ router.post("/vouchers", (req, res) => {
   }
   const newVoucher = {
     id: vouchers.length + 1,
+    companyId: req.user.companyId,
     voucherNo: voucherNo || `VCH-${String(vouchers.length + 1).padStart(3, "0")}`,
     date: date || new Date().toISOString().split("T")[0],
     type, // Contra, Journal, Payment, Receipt

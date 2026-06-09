@@ -20,6 +20,8 @@ model Company {
   customers      Customer[]
   vendors        Vendor[]
   items          Item[]
+  invoices       Invoice[]
+  stockMovements StockMovement[]
   
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -39,52 +41,109 @@ model User {
 
 // -- MASTER DATA --
 model Customer {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   companyId      Int
-  company        Company  @relation(fields: [companyId], references: [id])
+  company        Company   @relation(fields: [companyId], references: [id])
   name           String
   mobile         String
   address        String?
   gstin          String?
-  openingBalance Float    @default(0.0)
-  creditLimit    Float    @default(0.0)
+  openingBalance Float     @default(0.0)
+  creditLimit    Float     @default(0.0)
+  invoices       Invoice[]
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([companyId, mobile])
 }
 
 model Vendor {
-  id             Int      @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   companyId      Int
-  company        Company  @relation(fields: [companyId], references: [id])
+  company        Company   @relation(fields: [companyId], references: [id])
   name           String
   mobile         String
   address        String?
   gstin          String?
-  openingBalance Float    @default(0.0)
+  openingBalance Float     @default(0.0)
+  invoices       Invoice[]
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Item {
-  id               Int      @id @default(autoincrement())
+  id               Int             @id @default(autoincrement())
   companyId        Int
-  company          Company  @relation(fields: [companyId], references: [id])
+  company          Company         @relation(fields: [companyId], references: [id])
   name             String
   sku              String?
   category         String?
-  unit             String   // e.g., pcs, box, kg
+  unit             String          // e.g., pcs, box, kg
   purchasePrice    Float
   salePrice        Float
-  gstPercentage    Float    @default(0.0)
-  openingStock     Int      @default(0)
-  minStockAlert    Int      @default(0)
+  gstPercentage    Float           @default(0.0)
+  openingStock     Int             @default(0)
+  minStockAlert    Int             @default(0)
+  invoiceItems     InvoiceItem[]
+  stockMovements   StockMovement[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([companyId, sku])
 }
+
+// -- TRANSACTION DATA --
+model Invoice {
+  id             Int           @id @default(autoincrement())
+  companyId      Int
+  company        Company       @relation(fields: [companyId], references: [id])
+  invoiceNo      String
+  invoiceType    String        // "SALE" or "PURCHASE"
+  invoiceDate    DateTime      @default(now())
+  
+  customerId     Int?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  vendorId       Int?
+  vendor         Vendor?       @relation(fields: [vendorId], references: [id])
+  
+  items          InvoiceItem[]
+  totalItems     Int
+  totalQty       Int
+  grandTotal     Float
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([companyId, invoiceNo])
+}
+
+model InvoiceItem {
+  id             Int      @id @default(autoincrement())
+  invoiceId      Int
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  itemId         Int
+  item           Item     @relation(fields: [itemId], references: [id])
+  qty            Int
+  price          Float
+  gstPercentage  Float    @default(0.0)
+  gstAmount      Float    @default(0.0)
+  total          Float
+}
+
+model StockMovement {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  company        Company  @relation(fields: [companyId], references: [id])
+  itemId         Int
+  item           Item     @relation(fields: [itemId], references: [id])
+  movementType   String   // "IN" (increase, e.g. Purchase) or "OUT" (decrease, e.g. Sale)
+  qty            Int
+  reference      String   // e.g. "Sale Invoice INV-001"
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, itemId])
+}
+
