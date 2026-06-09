@@ -1,4 +1,7 @@
 import { useState } from "react";
+import CommonModal from "../components/common/CommonModal";
+import EmptyState from "../components/common/EmptyState";
+import Pagination from "../components/common/Pagination";
 
 function Customers() {
   // Customer List State
@@ -20,8 +23,12 @@ function Customers() {
   const [creditLimit, setCreditLimit] = useState("");
 
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
+  const itemsPerPage = 5;
   const [editId, setEditId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
@@ -128,22 +135,31 @@ function Customers() {
 
   // Delete Customer Function
   const deleteCustomer = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this customer?",
+    const updatedCustomers = customers.filter(
+      (customer) => customer.id !== id
     );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    const updatedCustomers = customers.filter((customer) => customer.id !== id);
 
     setCustomers(updatedCustomers);
   };
 
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(
+    filteredCustomers.length / itemsPerPage
+  );
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const currentCustomers = filteredCustomers.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
   return (
     <div>
       {/* Top Section */}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Customers</h1>
       </div>
@@ -152,7 +168,7 @@ function Customers() {
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <h2 className="text-xl font-bold mb-4">Add Customer</h2>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Name */}
           <input
             type="text"
@@ -259,81 +275,74 @@ function Customers() {
       />
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-blue-600 text-white">
-            <tr>
-              <th className="text-left p-4">Sr No</th>
-              <th className="text-left p-4">Name</th>
+      {customers.filter((customer) =>
+        customer.name.toLowerCase().includes(search.toLowerCase())
+      ).length === 0 ? (
 
-              <th className="text-left p-4">Mobile</th>
+        <EmptyState
+          icon="👥"
+          message="No Customers Found"
+          buttonText="Add Customer"
+          onAction={() => {
+            setSearch("");
+          }}
+        />
 
-              <th className="text-left p-4">GST Number</th>
+      ) : (
 
-              <th className="text-left p-4">Address</th>
+        <div className="bg-white rounded-xl shadow overflow-hidden">
 
-              <th className="text-left p-4">Opening Balance</th>
+          <table className="w-full">
 
-              <th className="text-left p-4">Credit Limit</th>
-              <th className="text-left p-4">Action</th>
-            </tr>
-          </thead>
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="text-left p-4">Sr No</th>
+                <th className="text-left p-4">Name</th>
+                <th className="text-left p-4">Mobile</th>
+                <th className="text-left p-4">GST Number</th>
+                <th className="text-left p-4">Address</th>
+                <th className="text-left p-4">Opening Balance</th>
+                <th className="text-left p-4">Credit Limit</th>
+                <th className="text-left p-4">Action</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            {customers
-              .filter((customer) =>
-                customer.name.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((customer, index) => (
+            <tbody>
+              {currentCustomers.map((customer, index) => (
                 <tr
                   key={customer.id}
                   className={`border-t ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
                     }`}
                 >
-                  <td className="p-4">{index + 1}</td>
-                  <td className="p-4">{customer.name}</td>
-
-                  <td className="p-4">{customer.mobile}</td>
-
-                  <td className="p-4">{customer.gst}</td>
-
-                  <td className="p-4">{customer.address}</td>
-
-                  <td className="p-4">₹ {customer.openingBalance || 0}</td>
-                  <td className="p-4">₹ {customer.creditLimit || 0}</td>
-
-                  <td className="p-4">
-                    <button
-                      onClick={() => {
-                        setEditId(customer.id);
-                        setName(customer.name);
-                        setMobile(customer.mobile);
-                        setGst(customer.gst);
-                        setAddress(customer.address);
-                        setOpeningBalance(customer.openingBalance);
-                        setCreditLimit(customer.creditLimit);
-                      }}
-                      className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        console.log(customer.id);
-                        deleteCustomer(customer.id);
-                      }}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {/* Existing Row Code Same Rahega */}
                 </tr>
               ))}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+
+          </table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+
+        </div>
+
+      )}
+      <CommonModal
+        isOpen={showDeleteModal}
+        title="Delete Customer"
+        message="Are you sure you want to delete this customer?"
+        type="delete"
+        onConfirm={() => {
+          deleteCustomer(deleteId);
+          setShowDeleteModal(false);
+        }}
+        onClose={() => setShowDeleteModal(false)}
+      />
+
     </div>
+
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 
-function Navbar() {
+function Navbar({ handleLogout }) {
     const [search, setSearch] = useState("");
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
@@ -212,7 +212,10 @@ function Navbar() {
                             Settings
                         </button>
 
-                        <button className="w-full text-left p-3 hover:bg-red-100 text-red-600">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full text-left p-3 hover:bg-red-100 text-red-600 cursor-pointer"
+                        >
                             Logout
                         </button>
 

@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -- MULTI-TENANCY CORE --
+model Company {
+  id             Int        @id @default(autoincrement())
+  name           String
+  gstNumber      String?
+  address        String?
+  mobileNumber   String?
+  invoicePrefix  String?
+  financialYear  String?
+  users          User[]
+  customers      Customer[]
+  vendors        Vendor[]
+  items          Item[]
+  
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  companyId  Int
+  company    Company  @relation(fields: [companyId], references: [id])
+  name       String
+  email      String   @unique
+  password   String
+  role       String   // "SUPER_ADMIN", "COMPANY_ADMIN", "STAFF"
+  
+  createdAt  DateTime @default(now())
+}
+
+// -- MASTER DATA --
+model Customer {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  company        Company  @relation(fields: [companyId], references: [id])
+  name           String
+  mobile         String
+  address        String?
+  gstin          String?
+  openingBalance Float    @default(0.0)
+  creditLimit    Float    @default(0.0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([companyId, mobile])
+}
+
+model Vendor {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  company        Company  @relation(fields: [companyId], references: [id])
+  name           String
+  mobile         String
+  address        String?
+  gstin          String?
+  openingBalance Float    @default(0.0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Item {
+  id               Int      @id @default(autoincrement())
+  companyId        Int
+  company          Company  @relation(fields: [companyId], references: [id])
+  name             String
+  sku              String?
+  category         String?
+  unit             String   // e.g., pcs, box, kg
+  purchasePrice    Float
+  salePrice        Float
+  gstPercentage    Float    @default(0.0)
+  openingStock     Int      @default(0)
+  minStockAlert    Int      @default(0)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([companyId, sku])
+}

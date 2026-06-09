@@ -1,13 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Breadcrumb from "./components/Breadcrumb";
 
 import Dashboard from "./pages/Dashboard";
-import Customers from "./pages/Customers";
-import Vendors from "./pages/Vendors";
-import Inventory from "./pages/Inventory";
+import Customers from "./pages/masters/Customers";
+import Vendors from "./pages/masters/Vendors";
+import Inventory from "./pages/masters/Inventory";
+import Login from "./pages/Login";
 
 import SalesInvoice from "./pages/sales/SalesInvoice";
 import SalesReturn from "./pages/sales/SalesReturn";
@@ -35,18 +37,41 @@ import CompanySettings from "./pages/settings/CompanySettings";
 import UserManagement from "./pages/settings/UserManagement";
 import RoleManagement from "./pages/settings/RoleManagement";
 import BackupRestore from "./pages/settings/BackupRestore";
+import SalesInvoicePrint from "./pages/print/SalesInvoicePrint";
+import PurchaseInvoicePrint from "./pages/print/PurchaseInvoicePrint";
+import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
+import ReceiptVoucherPrint from "./pages/print/ReceiptVoucherPrint";
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem("token"));
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+  };
+
+  if (!token) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login setToken={setToken} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
     <BrowserRouter>
       <div className="flex min-h-screen bg-gray-100">
 
         {/* Sidebar */}
-        <Sidebar />
+        <Sidebar handleLogout={handleLogout} />
         {/* Main Content */}
         <div className="flex-1">
 
-          <Navbar />
+          <Navbar handleLogout={handleLogout} />
 
           <div className="p-6">
 
@@ -117,6 +142,23 @@ function App() {
                 path="/backup-restore"
                 element={<BackupRestore />}
               />
+              <Route
+                path="/print/sales-invoice"
+                element={<SalesInvoicePrint />}
+              />
+              <Route
+                path="/print/purchase-invoice"
+                element={<PurchaseInvoicePrint />}
+              />
+              <Route
+                path="/print/payment-voucher"
+                element={<PaymentVoucherPrint />}
+              />
+              <Route
+                path="/print/receipt-voucher"
+                element={<ReceiptVoucherPrint />}
+              />
+              <Route path="/login" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
         </div>

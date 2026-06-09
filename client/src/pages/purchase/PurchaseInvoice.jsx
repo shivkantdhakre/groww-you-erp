@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CommonModal from "../../components/common/CommonModal";
 
 function PurchaseInvoice() {
   const [purchaseNo] = useState("PUR-001");
@@ -18,6 +19,9 @@ function PurchaseInvoice() {
   ]);
 
   const [savedPurchases, setSavedPurchases] = useState([]);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const addRow = () => {
     const newRow = {
@@ -75,16 +79,19 @@ function PurchaseInvoice() {
 
   const savePurchase = () => {
     if (!purchaseDate) {
-      alert("Purchase Date is required");
+      setMessage("Purchase Date is required");
+      setMessageType("error");
       return;
     }
 
     if (!vendorName) {
-      alert("Vendor Name is required");
+      setMessage("Vendor Name is required");
+      setMessageType("error");
       return;
     }
     if (vendorGST && vendorGST.length !== 15) {
-      alert("GST Number must be 15 characters");
+      setMessage("GST Number must be 15 characters");
+      setMessageType("warning");
       return;
     }
 
@@ -94,7 +101,8 @@ function PurchaseInvoice() {
     );
 
     if (hasInvalidItem) {
-      alert("Please enter Item Name, Qty and Rate for all items");
+      setMessage("Please enter Item Name, Qty and Rate for all items");
+      setMessageType("warning");
       return;
     }
 
@@ -109,14 +117,38 @@ function PurchaseInvoice() {
 
     setSavedPurchases([...savedPurchases, newPurchase]);
 
-    alert("Purchase Saved Successfully");
+    setShowSaveModal(true);
+    setVendorName("");
+    setVendorGST("");
+
+    setPurchaseItems([
+      {
+        id: 1,
+        itemName: "",
+        qty: 1,
+        rate: 0,
+        amount: 0,
+      },
+    ]);
   };
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Purchase Invoice</h1>
+      {message && (
+        <div
+          className={`p-3 rounded-lg mb-4 text-white ${messageType === "success"
+            ? "bg-green-600"
+            : messageType === "warning"
+              ? "bg-yellow-500"
+              : "bg-red-600"
+            }`}
+        >
+          {message}
+        </div>
+      )}
       <div className="bg-white p-5 rounded-xl shadow">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block mb-2 font-medium">Invoice Number</label>
 
@@ -323,6 +355,23 @@ function PurchaseInvoice() {
           </tbody>
         </table>
       </div>
+      <CommonModal
+        isOpen={showSaveModal}
+        title="Success"
+      >
+        <p className="mb-4">
+          Purchase Saved Successfully
+        </p>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowSaveModal(false)}
+            className="bg-green-600 text-white px-4 py-2 rounded"
+          >
+            OK
+          </button>
+        </div>
+      </CommonModal>
     </div>
   );
 }

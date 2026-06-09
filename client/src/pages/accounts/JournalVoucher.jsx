@@ -1,7 +1,8 @@
 import { useState } from "react";
+import CommonModal from "../../components/common/CommonModal";
 
 function JournalVoucher() {
-  const [voucherNo] = useState("JV-001");
+  const [voucherNo, setVoucherNo] = useState("JV-001");
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -12,6 +13,10 @@ function JournalVoucher() {
   const [narration, setNarration] = useState("");
 
   const [entries, setEntries] = useState([]);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState(null);
 
   const saveVoucher = () => {
     if (
@@ -19,7 +24,14 @@ function JournalVoucher() {
       !creditAccount ||
       !amount
     ) {
-      alert("Please fill all required fields");
+      setMessage("Please fill all required fields");
+      setMessageType("error");
+      return;
+    }
+
+    if (debitAccount === creditAccount) {
+      setMessage("Debit and Credit Account cannot be same");
+      setMessageType("warning");
       return;
     }
 
@@ -33,6 +45,9 @@ function JournalVoucher() {
     };
 
     setEntries([...entries, newEntry]);
+
+    setMessage("Voucher Saved Successfully");
+    setMessageType("success");
 
     setDebitAccount("");
     setCreditAccount("");
@@ -48,6 +63,19 @@ function JournalVoucher() {
       <p className="text-gray-500 mb-6">
         Manage journal voucher entries
       </p>
+
+      {message && (
+        <div
+          className={`p-3 rounded-lg mb-4 text-white ${messageType === "success"
+            ? "bg-green-600"
+            : messageType === "warning"
+              ? "bg-yellow-500"
+              : "bg-red-600"
+            }`}
+        >
+          {message}
+        </div>
+      )}
 
       {/* Form */}
 
@@ -158,6 +186,10 @@ function JournalVoucher() {
                 <td className="p-3">₹ {item.amount}</td>
                 <td className="p-3">
                   <button
+                    onClick={() => {
+                      setDeleteIndex(index);
+                      setShowDeleteModal(true);
+                    }}
                     className="bg-red-500 text-white px-3 py-1 rounded"
                   >
                     Delete
@@ -170,6 +202,41 @@ function JournalVoucher() {
         </table>
 
       </div>
+      <CommonModal
+        isOpen={showDeleteModal}
+        title="Delete Confirmation"
+      >
+        <p className="mb-4">
+          Are you sure you want to delete this voucher?
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className="bg-gray-500 text-white px-4 py-2 rounded"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              const updatedEntries = entries.filter(
+                (_, i) => i !== deleteIndex
+              );
+
+              setEntries(updatedEntries);
+
+              setShowDeleteModal(false);
+
+              setMessage("Voucher Deleted Successfully");
+              setMessageType("success");
+            }}
+            className="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Delete
+          </button>
+        </div>
+      </CommonModal>
     </div>
   );
 }

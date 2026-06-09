@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CommonModal from "../../components/common/CommonModal";
 
 function SalesInvoice() {
   const [invoiceNo, setInvoiceNo] = useState("INV-001");
@@ -17,6 +18,9 @@ function SalesInvoice() {
   ]);
 
   const [savedInvoices, setSavedInvoices] = useState([]);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const addRow = () => {
     const newRow = {
@@ -75,9 +79,21 @@ function SalesInvoice() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Sales Invoice</h1>
+      {message && (
+        <div
+          className={`p-3 rounded-lg mb-4 text-white ${messageType === "success"
+            ? "bg-green-600"
+            : messageType === "warning"
+              ? "bg-yellow-500"
+              : "bg-red-600"
+            }`}
+        >
+          {message}
+        </div>
+      )}
 
       <div className="bg-white p-5 rounded-xl shadow">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block mb-2 font-medium">Invoice No</label>
 
@@ -128,7 +144,7 @@ function SalesInvoice() {
           </thead>
 
           <tbody>
-            {invoiceItems.map((item) => (
+            {invoiceItems.map((item, index) => (
               <tr key={item.id} className="border-t">
                 <td className="p-3">
                   <input
@@ -186,7 +202,7 @@ function SalesInvoice() {
         <div className="bg-gray-100 p-4 rounded-lg mt-6">
           <h2 className="text-xl font-bold mb-3">Invoice Summary</h2>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <p className="text-gray-500">Total Items</p>
 
@@ -213,12 +229,14 @@ function SalesInvoice() {
           <button
             onClick={() => {
               if (!invoiceDate) {
-                alert("Invoice Date is required");
+                setMessage("Invoice Date is required");
+                setMessageType("error");
                 return;
               }
 
               if (!customerName) {
-                alert("Customer Name is required");
+                setMessage("Customer Name is required");
+                setMessageType("error");
                 return;
               }
 
@@ -230,7 +248,8 @@ function SalesInvoice() {
               );
 
               if (hasInvalidItem) {
-                alert("Please enter Item Name, Qty and Rate for all items");
+                setMessage("Please enter Item Name, Qty and Rate for all items");
+                setMessageType("warning");
                 return;
               }
 
@@ -259,7 +278,7 @@ function SalesInvoice() {
                   amount: 0,
                 },
               ]);
-              alert("Invoice Saved Successfully");
+              setShowSaveModal(true);
             }}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
           >
@@ -296,6 +315,23 @@ function SalesInvoice() {
           </tbody>
         </table>
       </div>
+      <CommonModal
+        isOpen={showSaveModal}
+        title="Success"
+      >
+        <p className="mb-4">
+          Invoice Saved Successfully
+        </p>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowSaveModal(false)}
+            className="bg-green-600 text-white px-4 py-2 rounded"
+          >
+            OK
+          </button>
+        </div>
+      </CommonModal>
     </div>
   );
 }

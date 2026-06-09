@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 
-function Sidebar() {
+function Sidebar({ handleLogout }) {
     const [masters, setMasters] = useState(false);
     const [sales, setSales] = useState(false);
     const [purchase, setPurchase] = useState(false);
@@ -208,6 +208,14 @@ function Sidebar() {
                     </Link>
                 </div>
             )}
+
+            {/* Logout Button */}
+            <button
+                onClick={handleLogout}
+                className="w-full text-left p-3 mt-8 bg-red-600 hover:bg-red-700 rounded text-white font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+                Logout
+            </button>
 
         </div>
     );
