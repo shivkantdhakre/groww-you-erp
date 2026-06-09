@@ -1,100 +1,145 @@
-import { useState } from "react";
-function Inventory() {
-  const [items, setItems] = useState([]);
+import { useState, useEffect } from "react";
+import { useStore } from "../../store/useStore";
 
-  const [itemName, setItemName] = useState("");
-  const [itemCode, setItemCode] = useState("");
+function Inventory() {
+  // Bind to global Zustand store
+  const items = useStore((state) => state.items);
+  const loading = useStore((state) => state.loadingItems);
+  const fetchItems = useStore((state) => state.fetchItems);
+  const addItemStore = useStore((state) => state.addItem);
+
+  const [name, setName] = useState("");
+  const [sku, setSku] = useState("");
+  const [category, setCategory] = useState("");
   const [hsnCode, setHsnCode] = useState("");
-  const [gst, setGst] = useState("");
+  const [gstPercentage, setGstPercentage] = useState("");
   const [unit, setUnit] = useState("");
-  const [purchaseRate, setPurchaseRate] = useState("");
-  const [saleRate, setSaleRate] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [salePrice, setSalePrice] = useState("");
   const [openingStock, setOpeningStock] = useState("");
+  const [minStockAlert, setMinStockAlert] = useState("10");
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
   const [editId, setEditId] = useState(null);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
-  const addItem = () => {
-    if (!itemName || !itemCode) {
-      alert("Item Name and Item Code are required");
+  // Fetch/refresh on component mount (no-op if already cached)
+  useEffect(() => {
+    fetchItems().catch((err) => {
+      console.error("Failed to load items:", err);
+      setMessage("Failed to load items from database.");
+      setMessageType("error");
+    });
+  }, [fetchItems]);
+
+  const addItem = async () => {
+    if (!name || !sku) {
+      setMessage("Item Name and SKU/Code are required");
+      setMessageType("error");
       return;
     }
-    if (purchaseRate && Number(purchaseRate) < 0) {
-      alert("Purchase Rate cannot be negative");
+    if (purchasePrice && Number(purchasePrice) < 0) {
+      setMessage("Purchase Price cannot be negative");
+      setMessageType("error");
       return;
     }
-
-    if (saleRate && Number(saleRate) < 0) {
-      alert("Sale Rate cannot be negative");
+    if (salePrice && Number(salePrice) < 0) {
+      setMessage("Sale Price cannot be negative");
+      setMessageType("error");
       return;
     }
-
     if (openingStock && Number(openingStock) < 0) {
-      alert("Opening Stock cannot be negative");
+      setMessage("Opening Stock cannot be negative");
+      setMessageType("error");
       return;
     }
+
     const itemExists = items.some(
-      (item) => item.itemCode === itemCode && item.id !== editId,
+      (item) => item.sku === sku && item.id !== editId,
     );
 
     if (itemExists) {
-      alert("Item Code already exists");
+      setMessage("Item SKU/Code already exists");
+      setMessageType("warning");
       return;
     }
 
-    if (gst && !["0", "5", "12", "18", "28"].includes(gst)) {
-      alert("GST must be 0, 5, 12, 18 or 28");
+    if (gstPercentage && !["0", "5", "12", "18", "28"].includes(String(gstPercentage))) {
+      setMessage("GST % must be 0, 5, 12, 18 or 28");
+      setMessageType("error");
       return;
     }
 
     if (editId !== null) {
+      // Mock update locally since PUT is not on backend yet
       const updatedItems = items.map((item) => {
         if (item.id === editId) {
           return {
             ...item,
-            itemName,
-            itemCode,
+            name,
+            sku,
+            category,
             hsnCode,
-            gst,
+            gstPercentage: parseFloat(gstPercentage) || 0.0,
             unit,
-            purchaseRate,
-            saleRate,
-            openingStock,
+            purchasePrice: parseFloat(purchasePrice) || 0.0,
+            salePrice: parseFloat(salePrice) || 0.0,
+            openingStock: parseInt(openingStock) || 0,
+            minStockAlert: parseInt(minStockAlert) || 0,
           };
         }
-
         return item;
       });
 
-      setItems(updatedItems);
-
+      useStore.setState({ items: updatedItems });
       setEditId(null);
-    } else {
-      const newItem = {
-        id: items.length + 1,
-        itemName,
-        itemCode,
-        category,
-        hsnCode,
-        gst,
-        unit,
-        purchaseRate,
-        saleRate,
-        openingStock,
-      };
-
-      setItems([...items, newItem]);
+      setName("");
+      setSku("");
+      setCategory("");
+      setHsnCode("");
+      setGstPercentage("");
+      setUnit("");
+      setPurchasePrice("");
+      setSalePrice("");
+      setOpeningStock("");
+      setMinStockAlert("10");
+      setMessage("Item Updated Successfully (Local)");
+      setMessageType("success");
+      return;
     }
 
-    setItemName("");
-    setItemCode("");
-    setHsnCode("");
-    setGst("");
-    setUnit("");
-    setPurchaseRate("");
-    setSaleRate("");
-    setOpeningStock("");
+    try {
+      await addItemStore({
+        name,
+        sku,
+        category,
+        unit,
+        purchasePrice: parseFloat(purchasePrice) || 0.0,
+        salePrice: parseFloat(salePrice) || 0.0,
+        gstPercentage: parseFloat(gstPercentage) || 0.0,
+        openingStock: parseInt(openingStock) || 0,
+        minStockAlert: parseInt(minStockAlert) || 10,
+        hsnCode,
+      });
+
+      setName("");
+      setSku("");
+      setCategory("");
+      setHsnCode("");
+      setGstPercentage("");
+      setUnit("");
+      setPurchasePrice("");
+      setSalePrice("");
+      setOpeningStock("");
+      setMinStockAlert("10");
+      setMessage("Item Saved Successfully");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Failed to save item:", err);
+      setMessage(err.response?.data?.message || "Failed to save item to database.");
+      setMessageType("error");
+    }
   };
 
   const deleteItem = (id) => {
@@ -106,31 +151,36 @@ function Inventory() {
       return;
     }
 
+    // Since backend does not have DELETE yet, delete locally in store for now
     const updatedItems = items.filter((item) => item.id !== id);
-
-    setItems(updatedItems);
+    useStore.setState({ items: updatedItems });
+    setMessage("Item Deleted Successfully (Local)");
+    setMessageType("success");
   };
+
 
   return (
     <div>
-      <h1 className="text-3xl font-bold">Inventory Page</h1>
+      <h1 className="text-3xl font-bold">Inventory</h1>
       <div className="bg-white p-5 rounded-xl shadow mt-6">
-        <h2 className="text-xl font-bold mb-4">Item Master</h2>
+        <h2 className="text-xl font-bold mb-4">
+          {editId !== null ? "Edit Item Master" : "Add Item Master"}
+        </h2>
 
         <div className="grid grid-cols-4 gap-4">
           <input
             type="text"
             placeholder="Item Name"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="border p-3 rounded-lg"
           />
 
           <input
             type="text"
-            placeholder="Item Code"
-            value={itemCode}
-            onChange={(e) => setItemCode(e.target.value)}
+            placeholder="SKU / Item Code"
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
             className="border p-3 rounded-lg"
           />
 
@@ -153,14 +203,14 @@ function Inventory() {
           <input
             type="number"
             placeholder="GST %"
-            value={gst}
-            onChange={(e) => setGst(e.target.value)}
+            value={gstPercentage}
+            onChange={(e) => setGstPercentage(e.target.value)}
             className="border p-3 rounded-lg"
           />
 
           <input
             type="text"
-            placeholder="Unit"
+            placeholder="Unit (e.g. Pcs, Box, Kg)"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             className="border p-3 rounded-lg"
@@ -168,17 +218,17 @@ function Inventory() {
 
           <input
             type="number"
-            placeholder="Purchase Rate"
-            value={purchaseRate}
-            onChange={(e) => setPurchaseRate(e.target.value)}
+            placeholder="Purchase Price"
+            value={purchasePrice}
+            onChange={(e) => setPurchasePrice(e.target.value)}
             className="border p-3 rounded-lg"
           />
 
           <input
             type="number"
-            placeholder="Sale Rate"
-            value={saleRate}
-            onChange={(e) => setSaleRate(e.target.value)}
+            placeholder="Sale Price"
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
             className="border p-3 rounded-lg"
           />
 
@@ -189,131 +239,175 @@ function Inventory() {
             onChange={(e) => setOpeningStock(e.target.value)}
             className="border p-3 rounded-lg"
           />
+
+          <input
+            type="number"
+            placeholder="Min Stock Alert"
+            value={minStockAlert}
+            onChange={(e) => setMinStockAlert(e.target.value)}
+            className="border p-3 rounded-lg"
+          />
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={addItem}
+            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 cursor-pointer"
+          >
+            {editId !== null ? "Update Item" : "Add Item"}
+          </button>
+          <button
+            onClick={() => {
+              setEditId(null);
+              setName("");
+              setSku("");
+              setCategory("");
+              setHsnCode("");
+              setGstPercentage("");
+              setUnit("");
+              setPurchasePrice("");
+              setSalePrice("");
+              setOpeningStock("");
+              setMinStockAlert("10");
+            }}
+            className="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-gray-600 cursor-pointer"
+          >
+            Clear
+          </button>
         </div>
       </div>
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={addItem}
-          className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700"
+
+      {message && (
+        <div
+          className={`p-3 rounded-lg mb-4 text-white mt-4 ${
+            messageType === "success"
+              ? "bg-green-500"
+              : messageType === "warning"
+              ? "bg-yellow-500"
+              : "bg-red-500"
+          }`}
         >
-          {editId !== null ? "Update Item" : "Add Item"}
-        </button>
-        <button
-          onClick={() => {
-            setEditId(null);
-            setItemName("");
-            setItemCode("");
-            setHsnCode("");
-            setGst("");
-            setUnit("");
-            setPurchaseRate("");
-            setSaleRate("");
-            setOpeningStock("");
-          }}
-          className="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-gray-600"
-        >
-          Clear
-        </button>
-      </div>
+          {message}
+        </div>
+      )}
 
-      {/* Inventory Count Card */}
-      <div className="bg-white p-4 rounded-xl shadow mb-4 mt-4 w-72">
-        <h3 className="text-gray-500 text-sm">Total Items</h3>
+      {loading ? (
+        <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow mt-4">
+          <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span className="text-slate-600 font-medium">Loading inventory...</span>
+        </div>
+      ) : (
+        <>
+          {/* Inventory Count Card */}
+          <div className="bg-white p-4 rounded-xl shadow mb-4 mt-4 w-72">
+            <h3 className="text-gray-500 text-sm">Total Items</h3>
+            <p className="text-3xl font-bold text-blue-600">{items.length}</p>
+          </div>
 
-        <p className="text-3xl font-bold text-blue-600">{items.length}</p>
-      </div>
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Search Item"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border p-3 rounded-lg mb-4 w-full"
+          />
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search Item"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="border p-3 rounded-lg mb-4 w-full"
-      />
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-blue-600 text-white">
-            <tr>
-              <th className="text-left p-4">Sr No</th>
-              <th className="text-left p-4">Item Name</th>
-              <th className="text-left p-4">Item Code</th>
-              <th className="text-left p-4">Category</th>
-              <th className="text-left p-4">HSN</th>
-              <th className="text-left p-4">GST %</th>
-              <th className="text-left p-4">Unit</th>
-              <th className="text-left p-4">Purchase Rate</th>
-              <th className="text-left p-4">Sale Rate</th>
-              <th className="text-left p-4">Opening Stock</th>
-              <th className="text-left p-4">Stock Status</th>
-              <th className="text-left p-4">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {items
-              .filter((item) =>
-                item.itemName.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((item, index) => (
-                <tr
-                  key={item.id}
-                  className={`border-t ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
-                >
-                  <td className="p-4">{index + 1}</td>
-                  <td className="p-4">{item.itemName}</td>
-                  <td className="p-4">{item.itemCode}</td>
-                  <td className="p-4">{item.category}</td>
-                  <td className="p-4">{item.hsnCode}</td>
-                  <td className="p-4">{item.gst}%</td>
-                  <td className="p-4">{item.unit}</td>
-                  <td className="p-4">₹ {item.purchaseRate}</td>
-                  <td className="p-4">₹ {item.saleRate}</td>
-                  <td className="p-4">{item.openingStock}</td>
-                  <td className="p-4">
-                    {Number(item.openingStock) < 10 ? (
-                      <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm">
-                        Low Stock
-                      </span>
-                    ) : (
-                      <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
-                        In Stock
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="p-4">
-                    <button
-                      onClick={() => {
-                        setEditId(item.id);
-                        setItemName(item.itemName);
-                        setItemCode(item.itemCode);
-                        setHsnCode(item.hsnCode);
-                        setGst(item.gst);
-                        setUnit(item.unit);
-                        setPurchaseRate(item.purchaseRate);
-                        setSaleRate(item.saleRate);
-                        setOpeningStock(item.openingStock);
-                      }}
-                      className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-blue-600 text-white">
+                <tr>
+                  <th className="text-left p-4">Sr No</th>
+                  <th className="text-left p-4">Item Name</th>
+                  <th className="text-left p-4">SKU / Code</th>
+                  <th className="text-left p-4">Category</th>
+                  <th className="text-left p-4">HSN</th>
+                  <th className="text-left p-4">GST %</th>
+                  <th className="text-left p-4">Unit</th>
+                  <th className="text-left p-4">Purchase Price</th>
+                  <th className="text-left p-4">Sale Price</th>
+                  <th className="text-left p-4">Opening Stock</th>
+                  <th className="text-left p-4">Stock Status</th>
+                  <th className="text-left p-4">Action</th>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+
+              <tbody>
+                {items
+                  .filter((item) =>
+                    item.name.toLowerCase().includes(search.toLowerCase()),
+                  )
+                  .map((item, index) => (
+                    <tr
+                      key={item.id}
+                      className={`border-t ${
+                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                      }`}
+                    >
+                      <td className="p-4">{index + 1}</td>
+                      <td className="p-4">{item.name}</td>
+                      <td className="p-4">{item.sku || "N/A"}</td>
+                      <td className="p-4">{item.category || "N/A"}</td>
+                      <td className="p-4">{item.hsnCode || "N/A"}</td>
+                      <td className="p-4">{item.gstPercentage || 0}%</td>
+                      <td className="p-4">{item.unit}</td>
+                      <td className="p-4">₹ {item.purchasePrice}</td>
+                      <td className="p-4">₹ {item.salePrice}</td>
+                      <td className="p-4">{item.openingStock}</td>
+                      <td className="p-4">
+                        {Number(item.openingStock) < (item.minStockAlert || 10) ? (
+                          <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm">
+                            Low Stock
+                          </span>
+                        ) : (
+                          <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                            In Stock
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditId(item.id);
+                              setName(item.name);
+                              setSku(item.sku || "");
+                              setCategory(item.category || "");
+                              setHsnCode(item.hsnCode || "");
+                              setGstPercentage(item.gstPercentage || "");
+                              setUnit(item.unit || "");
+                              setPurchasePrice(item.purchasePrice || "");
+                              setSalePrice(item.salePrice || "");
+                              setOpeningStock(item.openingStock || "");
+                              setMinStockAlert(item.minStockAlert || "10");
+                            }}
+                            className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => deleteItem(item.id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
+
 export default Inventory;
+

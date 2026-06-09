@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useStore } from "../store/useStore";
 
-
-function Sidebar({ handleLogout }) {
+function Sidebar() {
+    const logout = useStore((state) => state.logout);
     const [masters, setMasters] = useState(false);
     const [sales, setSales] = useState(false);
     const [purchase, setPurchase] = useState(false);
@@ -10,6 +11,7 @@ function Sidebar({ handleLogout }) {
     const [books, setBooks] = useState(false);
     const [reports, setReports] = useState(false);
     const [settings, setSettings] = useState(false);
+
 
     return (
         <div className="w-64 bg-slate-900 text-white min-h-screen p-4 overflow-y-auto">
@@ -211,7 +213,7 @@ function Sidebar({ handleLogout }) {
 
             {/* Logout Button */}
             <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="w-full text-left p-3 mt-8 bg-red-600 hover:bg-red-700 rounded text-white font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
                 Logout

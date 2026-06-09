@@ -1,11 +1,13 @@
 import { useState } from "react";
 import api from "../utils/api";
+import { useStore } from "../store/useStore";
 
-export default function Login({ setToken }) {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const login = useStore((state) => state.login);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,12 +23,8 @@ export default function Login({ setToken }) {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
 
-      // Save token and user details to localStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // Trigger app-level state update
-      setToken(token);
+      // Trigger global store login action (handles localStorage automatically)
+      login(token, user);
     } catch (err) {
       console.error("Login failed:", err);
       setError(
@@ -36,6 +34,7 @@ export default function Login({ setToken }) {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-950 font-sans">

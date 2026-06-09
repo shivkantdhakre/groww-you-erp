@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useStore } from "../store/useStore";
 
-
-function Navbar({ handleLogout }) {
+function Navbar() {
+    const logout = useStore((state) => state.logout);
     const [search, setSearch] = useState("");
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
+
 
     const [notifications, setNotifications] = useState([
         {
@@ -213,7 +215,7 @@ function Navbar({ handleLogout }) {
                         </button>
 
                         <button
-                            onClick={handleLogout}
+                            onClick={logout}
                             className="w-full text-left p-3 hover:bg-red-100 text-red-600 cursor-pointer"
                         >
                             Logout

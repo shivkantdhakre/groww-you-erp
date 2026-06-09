@@ -22,6 +22,17 @@ app.get("/", (req, res) => {
   res.send("Groww You ERP API Running 🚀");
 });
 
+// Global standardized error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Express Error Handler:", err);
+  const status = err.status || 500;
+  res.status(status).json({
+    message: err.message || "An unexpected error occurred",
+    error: err.error || err.message || "Internal Server Error"
+  });
+});
+
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
+

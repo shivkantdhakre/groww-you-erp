@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useStore } from "./store/useStore";
 
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -43,19 +44,25 @@ import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
 import ReceiptVoucherPrint from "./pages/print/ReceiptVoucherPrint";
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const token = useStore((state) => state.token);
+  const fetchCustomers = useStore((state) => state.fetchCustomers);
+  const fetchVendors = useStore((state) => state.fetchVendors);
+  const fetchItems = useStore((state) => state.fetchItems);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
-  };
+  // Global cache preloading immediately after authentication
+  useEffect(() => {
+    if (token) {
+      fetchCustomers().catch(() => {});
+      fetchVendors().catch(() => {});
+      fetchItems().catch(() => {});
+    }
+  }, [token, fetchCustomers, fetchVendors, fetchItems]);
 
   if (!token) {
     return (
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login setToken={setToken} />} />
+          <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
@@ -67,11 +74,12 @@ function App() {
       <div className="flex min-h-screen bg-gray-100">
 
         {/* Sidebar */}
-        <Sidebar handleLogout={handleLogout} />
+        <Sidebar />
         {/* Main Content */}
         <div className="flex-1">
 
-          <Navbar handleLogout={handleLogout} />
+          <Navbar />
+
 
           <div className="p-6">
 

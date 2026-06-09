@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import api from "../../utils/api";
+import { useStore } from "../../store/useStore";
 
 function Customers() {
-  // Customer List State
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Bind to global Zustand store
+  const customers = useStore((state) => state.customers);
+  const loading = useStore((state) => state.loadingCustomers);
+  const fetchCustomers = useStore((state) => state.fetchCustomers);
+  const addCustomerStore = useStore((state) => state.addCustomer);
 
   // Form State
   const [name, setName] = useState("");
@@ -20,23 +22,14 @@ function Customers() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
-  // Fetch real data on component mount
+  // Fetch/refresh on component mount (no-op if already cached)
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const response = await api.get("/masters/customers");
-        setCustomers(response.data);
-      } catch (err) {
-        console.error("Failed to load customers:", err);
-        setMessage("Failed to load customers from database.");
-        setMessageType("error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCustomers();
-  }, []);
+    fetchCustomers().catch((err) => {
+      console.error("Failed to load customers:", err);
+      setMessage("Failed to load customers from database.");
+      setMessageType("error");
+    });
+  }, [fetchCustomers]);
 
   // Add/Update Customer Function
   const addCustomer = async () => {
@@ -94,7 +87,7 @@ function Customers() {
         return customer;
       });
 
-      setCustomers(updatedCustomers);
+      useStore.setState({ customers: updatedCustomers });
       setEditId(null);
       setName("");
       setMobile("");
@@ -108,7 +101,7 @@ function Customers() {
     }
 
     try {
-      const response = await api.post("/masters/customers", {
+      await addCustomerStore({
         name,
         mobile,
         gstin,
@@ -117,7 +110,6 @@ function Customers() {
         creditLimit: parseFloat(creditLimit) || 0.0
       });
 
-      setCustomers([...customers, response.data]);
       setName("");
       setMobile("");
       setGstin("");
@@ -143,12 +135,13 @@ function Customers() {
       return;
     }
 
-    // Since backend does not have DELETE yet, delete locally for now
+    // Since backend does not have DELETE yet, delete locally in store for now
     const updatedCustomers = customers.filter((customer) => customer.id !== id);
-    setCustomers(updatedCustomers);
+    useStore.setState({ customers: updatedCustomers });
     setMessage("Customer Deleted Successfully (Local)");
     setMessageType("success");
   };
+
 
   return (
     <div>
